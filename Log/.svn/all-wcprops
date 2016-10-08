@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/sergey_lib/!svn/ver/986/trunk/Log
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/243/trunk/Log/Exception.php
+END
+File.php
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/sergey_lib/!svn/ver/713/trunk/Log/File.php
+END
+Test.php
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/sergey_lib/!svn/ver/1/trunk/Log/Test.php
+END
+Interface.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/243/trunk/Log/Interface.php
+END
+Console.php
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/sergey_lib/!svn/ver/567/trunk/Log/Console.php
+END
+Abstract.php
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/sergey_lib/!svn/ver/969/trunk/Log/Abstract.php
+END
+Factory.php
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/sergey_lib/!svn/ver/961/trunk/Log/Factory.php
+END

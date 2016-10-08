@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if [ 0 == $# ];
+then
+    set -- "*"
+fi
+
+for s in $@;
+do
+    if [ -d ${s} ];
+    then
+        echo "Testing ${s}"
+        phpunit "${s/\//_}_Test"
+    fi
+done

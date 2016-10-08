@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/sergey_lib/!svn/ver/534/trunk/Actor/Twitter
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/279/trunk/Actor/Twitter/Exception.php
+END
+Confirmer.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/534/trunk/Actor/Twitter/Confirmer.php
+END
+Grabber.php
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/sergey_lib/!svn/ver/534/trunk/Actor/Twitter/Grabber.php
+END
+Registrator.php
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/sergey_lib/!svn/ver/534/trunk/Actor/Twitter/Registrator.php
+END
+Messenger.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/534/trunk/Actor/Twitter/Messenger.php
+END

@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/sergey_lib/!svn/ver/952/trunk/Service
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/sergey_lib/!svn/ver/244/trunk/Service/Exception.php
+END
+GeoLocator.php
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/sergey_lib/!svn/ver/815/trunk/Service/GeoLocator.php
+END
+DeathByCaptcha.php
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/sergey_lib/!svn/ver/952/trunk/Service/DeathByCaptcha.php
+END

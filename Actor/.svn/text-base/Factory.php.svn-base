@@ -1,0 +1,33 @@
+<?php
+/**
+ * @package Actor
+ */
+
+/**
+ * Actors' factory
+ *
+ * @package Actor
+ */
+abstract class Actor_Factory
+{
+    /**
+     * Creates a new actor instance
+     *
+     * @param string $name Actor's name
+     * @param Log_Interface $log  Logger
+     * @return Actor_Abstract
+     */
+    static public function factory($name, Log_Interface $log=null)
+    {
+        $class = str_replace(
+            '_Factory',
+            '_' . ucfirst(strtr($name, '\/:', '___')),
+            __CLASS__
+        );
+        $actor = new $class();
+        if ($log) {
+            $actor->set_log($log);
+        }
+        return $actor;
+    }
+}

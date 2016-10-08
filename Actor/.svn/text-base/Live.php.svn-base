@@ -1,0 +1,875 @@
+<?php
+/**
+ * @package Actor
+ */
+
+/**
+ * @package Actor
+ * @subpackage Live
+ */
+class Actor_Live extends Actor_Http_Abstract
+{
+    const CID_REGEX = '#cid[-=]([\da-fA-F]{16})#';
+
+    const HOST              = 'http://www.live.com';
+    const HOME_HOST         = 'http://home.live.com';
+    const PROFILE_HOST      = 'http://profile.live.com';
+    const PROFILE_HOME_HOST = 'http://home.profile.live.com';
+    const PEOPLE_HOST       = 'http://people.live.com';
+    const LOG_IN_HOST       = 'https://login.live.com';
+    const ACCOUNT_HOST      = 'https://account.live.com';
+    const PASSPORT_HOST     = 'https://accountservices.passport.net';
+    const MSN_HOST          = 'https://accountservices.msn.com';
+    const MAIL_HOST         = 'http://mail.live.com';
+    const CAPTCHA_HOST      = 'https://hipservice.live.com';
+
+    const LOG_IN_PWDPAD = 'IfYouAreReadingThisYouHaveTooMuchFreeTime';
+    const LOG_OUT_URL   = '/logout.srf';
+
+    const ACCOUNT_SUMMARY_URL = '/SummaryPage.aspx';
+
+    const PROFILE_DETAILS_URL = '/details/';
+
+    const PROFILE_DETAILS_EDIT_URL = '/details/Edit/About';
+    const PROFILE_CONTACT_EDIT_URL = '/details/Edit/Contact';
+
+    const PROFILE_NAME_EDIT_URL = '/details/Edit/Name';
+    const PROFILE_NAME_SAVE_URL = '/details/Edit/SaveName';
+
+    const USERPIC_UPLOAD_URL      = '/details/EditPic.aspx';
+    const USERPIC_UPLOAD_SAVE_URL = '/details/Edit/SavePic';
+
+    const ENC_KEYS_URL = '/ppsecure/JSPublicKey.srf';
+
+    const PROOF_EMAIL           = '/proofs/AddEmail';
+    const PROOF_SECRET_QUESTION = '/ChangeSQSA.aspx';
+
+    const PRIVACY_MODE_PUBLIC  = 'Public';
+    const PRIVACY_MODE_LIMITED = 'SemiPrivate';
+    const PRIVACY_MODE_PRIVATE = 'Private';
+
+    const PRIVACY_URL          = '/Privacy';
+    const PRIVACY_MIGRATE_URL  = '/ProfileCompleteness/SavePrivacyProfileMigrateAB';
+    const PRIVACY_SAVE_URL     = '/ProfileCompleteness/SavePrivacyProfile';
+
+
+    protected $_cid = '';
+
+
+    protected function _decode_recaptcha($src=null, $script_url=null)
+    {
+        if (null === $src) {
+            $src = &$this->_response;
+        }
+
+        $this->log('Fetching HIP configuration');
+        if (null === $script_url) {
+            if (!$script_url = Html_Document::find_first(
+                $src,
+                'script[@id = "WLX_HIP_SCRIPTTAG_wlxsignup"]'
+            )) {
+                throw new Actor_Live_Exception(
+                    'CAPTCHA script URL not found',
+                    Actor_Exception::PROXY_BANNED
+                );
+            } else {
+                $script_url = new Url($script_url->getAttribute('src'));
+            }
+        }
+
+        $q = $script_url->query;
+        $tokens = array('fid' => $q['fid']);
+        $script = $this->_connection->get($script_url);
+        foreach (array(
+            'hipfrtoken',
+            'k',
+            'hipchallengeurl',
+            'hipimageurl',
+            'hipverifyurl',
+            'extra_challenge_params',
+            'HIPChallenge',
+        ) as $k) {
+            if (!preg_match(
+                '/[{,]' . preg_quote($k) . ':"(.+?)",/',
+                $script,
+                $m
+            )) {
+                throw new Actor_Live_Exception(
+                    "CAPTCHA token {$k} not found",
+                    Actor_Exception::PROXY_BANNED
+                );
+            } else {
+                $tokens[$k] = stripcslashes($m[1]);
+            }
+        }
+
+        $url = new Url($tokens['hipchallengeurl']);
+        $url->query = array_merge(
+            Url::parse_query($tokens['extra_challenge_params']),
+            array('ajax' => 1,
+                  'k'    => $tokens['k'])
+        );
+        if (!preg_match(
+            '/\schallenge\s?:\s?\'(.+?)\',/',
+            $this->_connection->get($url),
+            $m
+        )) {
+            throw new Actor_Live_Exception(
+                'ReCAPTCHA challenge not found',
+                Actor_Exception::PROXY_BANNED
+            );
+        } else {
+            $tokens['recaptcha_challenge'] = stripcslashes($m[1]);
+        }
+
+        $started = time();
+        $captcha_url = new Url($tokens['hipimageurl']);
+        $captcha_url->query = array('c' => $tokens['recaptcha_challenge']);
+        $verify_url = new Url($tokens['hipverifyurl']);
+        $captcha = $enc_response = false;
+        for ($i = self::RETRY_COUNT; $i && !$captcha; $i--) {
+            if ($captcha = $this->_decode_captcha($captcha_url)) {
+                $captcha[1] = str_replace(' ', '', strtolower($captcha[1]));
+                $verify_url->query = array(
+                    'c'        => $tokens['recaptcha_challenge'],
+                    'response' => $captcha[1],
+                );
+                if (!preg_match(
+                    '/encrypted_response:\'(.+?)\'/',
+                    $this->_connection->get($verify_url),
+                    $m
+                )) {
+                    $this->_dump('recaptcha.verify.js', $this->_connection->response);
+                    $captcha = false;
+                } else {
+                    $tokens['recaptcha_response'] = stripcslashes($m[1]);
+                }
+            }
+        }
+        if (is_array($captcha)) {
+            $tokens['HIPTime'] = (time() - $started) * rand(1000, 9999);
+            $captcha[2] = $tokens;
+        }
+        return $captcha;
+    }
+
+    protected function _get_timestamp()
+    {
+        return (string)time() . str_pad((string)rand(0, 999), 3, '0', STR_PAD_LEFT);
+    }
+
+    protected function _get_profile_host($cid=null, $home=false)
+    {
+        if (null === $cid) {
+            if (!$this->_cid) {
+                $this->_connection->get(self::PROFILE_HOST);
+                if (preg_match(self::CID_REGEX, $this->_connection->last_url, $m)) {
+                    $this->_cid = $m[1];
+                }
+            }
+            $cid = $this->_cid;
+        }
+        return $cid ? str_replace(
+            '://',
+            "://cid-{$cid}.",
+            $home ? self::PROFILE_HOME_HOST : self::PROFILE_HOST
+        ) : null;
+    }
+
+    protected function _get_encryption_keys()
+    {
+        $this->log('Fetching encryption keys');
+        $s = $this->_connection->get(self::LOG_IN_HOST . self::ENC_KEYS_URL);
+        $this->_dump('encryption-keys.js', $s);
+        if (!preg_match_all('#(?:^|;) var (\S+)\s?=\s?"([^"]+)#', $s, $m)) {
+            $this->log('Encryption keys not found',
+                       Log_Abstract::LEVEL_ERROR);
+            return false;
+        } else {
+            return array_combine($m[1], array_map('stripcslashes', $m[2]));
+        }
+    }
+
+    protected function _encrypt($pass, array $enc_keys=null, $sqsa='', $type='pwd', $new_pass='')
+    {
+        if (!$enc_keys && !($enc_keys = $this->_get_encryption_keys())) {
+            return false;
+        }
+
+        $this->log(rtrim("Encrypting {$type} {$pass} {$sqsa} {$new_pass}"));
+
+        if ($s = JavaScript_Executor::execute(
+            str_replace('.php', '.encryptor.js', __FILE__),
+            array($enc_keys['Key'],
+                  $enc_keys['randomNum'],
+                  $pass,
+                  $sqsa,
+                  $type,
+                  $new_pass)
+        )) {
+            return array('keys' => $enc_keys,
+                         'data' => $s);
+        }
+
+        $this->log('Encryption failed, check the corresponding script',
+                   Log_Abstract::LEVEL_ERROR);
+        return false;
+    }
+
+    protected function _redirect()
+    {
+        for ($i = self::RETRY_COUNT; $i; $i--) {
+            if ($f = Html_Form::get(
+                $this->_response,
+                $this->_connection,
+                'id',
+                'fmHF'
+            )) {
+                $this->_response = $f->submit($this->_connection);
+                $this->_dump("redirect.{$i}.html");
+            } else if ($f = Html_Form::get(
+                $this->_response,
+                $this->_connection,
+                'id',
+                'idForm'
+            )) {
+                $f['timeZoneOffset'] = -60 * rand(2, 4);
+                $this->_response = $f->submit($this->_connection);
+                $this->_dump("redirect.{$i}.html");
+            } else if (preg_match(
+                '#window\.location\.replace\([\'"]([^"\']+)#',
+                $this->_response,
+                $m
+            )) {
+                $this->get(stripcslashes($m[1]));
+                $this->_dump("redirect.{$i}.html");
+            } else {
+                break;
+            }
+        }
+        return $this->_response;
+    }
+
+    protected function _init_login($user_id, $pass, $landing_url=null)
+    {
+        if (null === $landing_url) {
+            $landing_url = self::HOST . '/';
+        }
+
+        $this->get($landing_url);
+        $this->_dump('login.landing.html');
+        if (
+            !preg_match('#name="PPFT"[^>]+value="([^"]+)#', $this->_response, $ppft) ||
+            !preg_match('#srf_uPost=\'(.+?)\';#', $this->_response, $url)
+        ) {
+            throw new Actor_Live_Exception(
+                'Login form components not found',
+                Actor_Exception::PROXY_BANNED
+            );
+        } else {
+            $ppft = html_entity_decode($ppft[1], ENT_QUOTES);
+            $url = stripcslashes($url[1]);
+        }
+
+        $this->post($url, http_build_query(array(
+            'login'        => &$user_id,
+            'passwd'       => &$pass,
+            'type'         => 11,
+            'LoginOptions' => 1,  // Save user ID & password
+            'NewUser'      => 1,
+            'MEST'         => '',
+            'PPSX'         => 'Passpo',
+            'PPFT'         => &$ppft,
+            'idsbho'       => 1,
+            'PwdPad'       => '',
+            'sso'          => '',
+            'i1'           => '',
+            'i2'           => 1,
+            'i3'           => rand(1, 999999),
+            'i4'           => '',
+            'i12'          => 1,
+        )));
+        $this->_dump('login.submit.html');
+        if (false !== strpos($this->_response, '>Lockout<')) {
+            throw new Actor_Live_Exception(
+                'Too many invalid login attempts',
+                Actor_Exception::INVALID_CREDENTIALS
+            );
+        } else if (false !== strpos(
+            $this->_response,
+            'address or password is incorrect'
+        )) {
+            throw new Actor_Live_Exception(
+                'Invalid user ID/password',
+                Actor_Exception::INVALID_CREDENTIALS
+            );
+        }else if (false !== strpos(
+            $this->_response,
+            'Verify your email address'
+        )) {
+            throw new Actor_Live_Exception(
+                'Account not verified yet',
+                Actor_Exception::ACCOUNT_NOT_CONFIRMED
+            );
+        } else {
+            return $this->_response;
+        }
+    }
+
+    protected function _upload_userpic($fn)
+    {
+        $profile_host = $this->_get_profile_host();
+
+        $this->get(
+            $profile_host . self::USERPIC_UPLOAD_URL,
+            null,
+            $profile_host
+        );
+        $this->_dump('userpic.form.html');
+        if (!$this->get_form('id', 'frmUpload')) {
+            $this->log('Userpic upload form not found',
+                       Log_Abstract::LEVEL_ERROR);
+            return false;
+        }
+        $resource_id = preg_match('#"ResourceId":("[^"]+")#', $this->_response, $m)
+            ? json_decode($m[1])
+            : null;
+
+        $this->_form->add_file('fileUpload', $fn);
+        $this->submit();
+        $this->_dump('userpic.upload.html');
+        if (false === strpos($this->_response, '"HasSucceeded":"true"')) {
+            return false;
+        } else if (!$resource_id) {
+            if (!preg_match(
+                '#"ResourceId":("[^"]+")#',
+                $this->_response,
+                $m
+            )) {
+                $this->log('Userpic resource ID not found',
+                           Log_Abstract::LEVEL_ERROR);
+                return false;
+            } else {
+                $resource_id = json_decode($m[1], true);
+            }
+        }
+
+        // Hardcoded values for 150x120 userpics
+        $this->post($profile_host . self::USERPIC_UPLOAD_SAVE_URL, array(
+            'sc'                 => $this->_form['sc'],
+            'resourceId'         => $resource_id,
+            'x'                  => 15,
+            'y'                  => 0,
+            'width'              => 120,
+            'height'             => 120,
+            'isWebReadyUpToDate' => 'true',
+        ));
+        $this->_dump('userpic.save.html');
+        return (false !== strpos($this->_response, '"HasSucceeded":"true"'));
+    }
+
+
+    public function set_cid($cid)
+    {
+        $this->_cid = str_replace('cid-', '', (string)$cid);
+        return $this;
+    }
+
+    public function get_cid()
+    {
+        return $this->_cid;
+    }
+
+    /**
+     * @see Actor_Http_Abstract::init()
+     */
+    public function init()
+    {
+        $this->_cid = '';
+        parent::init();
+        if ($this->_connection) {
+            $this->_connection->follow_refresh = false;
+        }
+        return $this;
+    }
+
+    /**
+     * @see Actor_Interface::login()
+     */
+    public function login($user_id, $pass)
+    {
+        $this->log("Logging in as {$user_id}:{$pass}");
+
+        $this->_init_login($user_id, $pass);
+
+        $this->_connection->set_cookie('mkt', 'ep=en-US', '.live.com');
+        $this->_connection->follow_refresh = true;
+        $this->get(self::PROFILE_HOST);
+        $this->_dump('profile.html');
+        $this->_connection->follow_refresh = false;
+        if (false !== strpos($this->_response, 'logout.')) {
+            if (!preg_match(self::CID_REGEX, $this->_connection->last_url, $m)) {
+                throw new Actor_Live_Exception(
+                    "{$user_id} CID not found",
+                    Actor_Exception::PROXY_BANNED
+                );
+            } else {
+                $this->_user_id = $user_id;
+                $this->_pass = $pass;
+                $this->_cid = $m[1];
+            }
+
+            if ($this->is_privacy_mode_not_set()) {
+                try {
+                    $this->update_privacy_mode();
+                } catch (Actor_Exception $e) {
+                    $this->log($e, Log_Abstract::LEVEL_ERROR);
+                }
+            }
+
+            if ($this->is_default_userpic()) {
+                $userpic =
+                    $this->call_process_method('get_profile_userpic', $user_id);
+                if ($userpic) {
+                    try {
+                        $this->upload_userpic($userpic);
+                    } catch (Actor_Exception $e) {
+                        $this->log($e, Log_Abstract::LEVEL_ERROR);
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        $this->log('Login failed',
+                   Log_Abstract::LEVEL_ERROR);
+        return false;
+    }
+
+    /**
+     * @see Actor_Interface::logout()
+     */
+    public function logout()
+    {
+        if ($this->_user_id) {
+            $this->_connection->get(self::LOG_IN_HOST . self::LOG_OUT_URL);
+        }
+        $this->_cid = '';
+        return parent::logout();
+    }
+
+    public function fetch_profile_details($cid=null)
+    {
+        if (null === $cid) {
+            $cid = &$this->_cid;
+        }
+
+        $this->log("Fetching {$cid} profile details");
+
+        $this->get(
+            $this->_get_profile_host($cid) . self::PROFILE_DETAILS_URL,
+            'mkt=en-us',
+            $this->_get_profile_host() . '/'
+        );
+        $this->_dump("{$cid}.details.html");
+        if (404 == $this->_connection->status_code) {
+            throw new Actor_Live_Exception(
+                "{$cid} is not found or private",
+                Actor_Exception::RECIPIENT_NOT_FOUND
+            );
+        } else if (false !== strpos(
+            $this->_response,
+            'permission to view this space'
+        )) {
+            throw new Actor_Live_Exception(
+                "{$cid} is protected",
+                Actor_Exception::RECIPIENT_PROTECTED
+            );
+        } else if (false !== strpos(
+            $this->_response,
+            'This profile is temporarily unavailable'
+        )) {
+            throw new Actor_Live_Exception(
+                "{$cid} is suspended",
+                Actor_Exception::RECIPIENT_SUSPENDED
+            );
+        } else {
+            return (!$this->_connection->errno && $this->_response)
+                ? $this->_response
+                : false;
+        }
+    }
+
+    /**
+     * Confirms user's name
+     *
+     * @return bool
+     */
+    public function confirm_name($first_name='', $last_name='')
+    {
+        $this->log("Confirming (setting) the name to {$first_name} {$last_name}");
+
+        $this->get($this->_get_profile_host() . self::PROFILE_NAME_EDIT_URL);
+        $this->_dump('confirm-name.form.html');
+
+        $query = array(
+            'sc' => $this->_connection->get_cookie('sc'),
+            'r'  => (string)time() . (string)rand(100, 999),
+        );
+        if ($first_name || $last_name) {
+            foreach (array('fn' => 'first_name', 'ln' => 'last_name') as $k => $v) {
+                if ($$v) {
+                    $query[$k] = $$v;
+                }
+            }
+        }
+        foreach (array('NameA' => 'fn', 'NameB' => 'ln') as $k => $v) {
+            if (!empty($query[$v])) {
+                continue;
+            } else if (!preg_match(
+                '#cxp_pen_' . $k . '"[^>]+value="([^"]+)#',
+                $this->_response,
+                $m
+            )) {
+                $this->log("Name {$k} field not found",
+                           Log_Abstract::LEVEL_ERROR);
+                return false;
+            } else {
+                $query[$v] = html_entity_decode($m[1], ENT_QUOTES);
+            }
+        }
+        $this->_dump('confirm-name.submit.txt', $query);
+        $this->get($this->_get_profile_host() .self::PROFILE_NAME_SAVE_URL, $query);
+        $this->_dump('confirm-name.submit.html');
+        return true;
+    }
+
+    /**
+     * Updates user's profile details
+     *
+     * @param array $details Profile details
+     * @return bool
+     */
+    public function update_account_details(array $details)
+    {
+        $this->log('Updating account details');
+        $this->log($details, Log_Abstract::LEVEL_DEBUG);
+
+        $this->get($this->_get_profile_host());
+        $this->confirm_name($details['first_name'], $details['last_name']);
+
+        $this->get($this->_get_profile_host() . self::PROFILE_DETAILS_EDIT_URL);
+        $this->_dump('profile.about.html');
+        if (!$this->get_form('id', 'aspnetForm')) {
+            $this->log('Account details editor form not found',
+                       Log_Abstract::LEVEL_ERROR);
+            return false;
+        }
+
+        $this->_form['ctl00$ctl00$MainContent$MainContent$Gender'] =
+            ('M' == $details['gender'])
+                ? 'Male'
+                : 'Female';
+        $this->_form['ctl00$ctl00$MainContent$MainContent$iMoreAboutMe'] =
+            substr($details['about_me'], 0, 1024);
+        $this->_form->action = self::PROFILE_DETAILS_EDIT_URL;
+        $this->submit();
+        $this->_dump('profile.about.submit.html');
+        if (false !== strpos($this->_response, 'changes were saved')) {
+            return true;
+        }
+
+        $this->log('Failed updating profile details',
+                   Log_Abstract::LEVEL_ERROR);
+        return false;
+    }
+
+    public function is_account_email_set($email, $src=null)
+    {
+        if (null === $src) {
+            $this->get(self::ACCOUNT_HOST);
+            $this->_dump('summary.html');
+            $src = $this->_response;
+        }
+        return (false !== strpos(
+            $this->_response,
+            'title="' . strtolower($email) . '"'
+        ));
+    }
+
+    public function update_account_email($email)
+    {
+        if (is_array($email)) {
+            $email = $email['email'];
+        }
+
+        $this->log('Updating alternative e-mail');
+        $this->log($email, Log_Abstract::LEVEL_DEBUG);
+
+        $this->get(
+            self::ACCOUNT_HOST . self::PROOF_EMAIL,
+            null,
+            self::ACCOUNT_HOST
+        );
+        $this->_dump('add-alt-email.form.html');
+        if (!$this->get_form('id', 'AddEmailForm')) {
+            $this->log('Alternative e-mail form not found',
+                       Log_Abstract::LEVEL_ERROR);
+            return false;
+        }
+
+        $this->_form['EmailAddress'] =
+            $this->_form['ReEmailAddress'] = $email;
+        $this->submit();
+        $this->_dump('alt-email.submit.html');
+        if ($this->is_account_email_set($email, $this->_response)) {
+            return true;
+        }
+
+        $this->log('Failed updating alternative e-mail',
+                   Log_Abstract::LEVEL_ERROR);
+        return false;
+    }
+
+    public function is_account_secret_question_set($secret_question, $src=null)
+    {
+        if (!is_array($secret_question)) {
+            $secret_question = explode(';', $secret_question, 2);
+        }
+        if (null === $src) {
+            $this->get(self::ACCOUNT_HOST);
+            $this->_dump('summary.html');
+            $src = $this->_response;
+        }
+        return preg_match(
+            '#idSQSAAvail"[^>]+>\s+' . preg_quote($secret_question[0]) . '\s+<#',
+            $src
+        );
+    }
+
+    public function update_account_secret_question($secret_question, array $location)
+    {
+        if (!is_array($secret_question)) {
+            $secret_question = explode(';', $secret_question, 2);
+        }
+
+        $this->log('Updating secret question/location');
+        $this->log($secret_question, Log_Abstract::LEVEL_DEBUG);
+        $this->log($location, Log_Abstract::LEVEL_DEBUG);
+
+        $this->get(
+            self::ACCOUNT_HOST . self::PROOF_SECRET_QUESTION,
+            null,
+            self::ACCOUNT_HOST
+        );
+        $this->_dump('secret-question.form.html');
+        if (!$this->get_form('id', 'aspnetForm')) {
+            $this->log('Secret question form not found',
+                       Log_Abstract::LEVEL_ERROR);
+            return false;
+        }
+
+        $prefix = 'ctl00$ctl00$MainContent$MainContent$AccountContent$ctl00$';
+        if (!$s = $this->_encrypt($this->_pass, null, $secret_question[1], 'chgsqsa', null)) {
+            return false;
+        } else {
+            unset(
+                $this->_form["{$prefix}iCurPassword"],
+                $this->_form["{$prefix}iSecretAnswer"]
+            );
+            $this->_form["{$prefix}iQuestion"] = $secret_question[0];
+            $this->_form["{$prefix}iEncryptedSecretAnswer"] = $s['data'];
+            $this->_form["{$prefix}iPublicKey"] = $s['keys']['SKI'];
+        }
+        $this->_form["{$prefix}iCountry"] = $location['country'];
+        $this->_form["{$prefix}iPostal"] = $location['postal_code'];
+        $this->_form["{$prefix}iRegion"] = $this->call_process_method(
+            'get_region_id',
+            $location['country'],
+            $location['region']
+        );  // Numberic region ID goes here
+        $this->submit();
+        $this->_dump('secret-question.submit.html');
+        if (
+            (false !== strpos($this->_response, 'has been saved')) ||
+            $this->is_account_secret_question_set($secret_question, $this->_response)
+        ) {
+            return true;
+        }
+
+        $this->log('Failed updating secret question/location',
+                   Log_Abstract::LEVEL_ERROR);
+        return false;
+    }
+
+    public function update_contact_details(array $details)
+    {
+        $this->log('Updating account contact details');
+        $this->log($details, Log_Abstract::LEVEL_DEBUG);
+
+        $this->get($this->_get_profile_host() . self::PROFILE_CONTACT_EDIT_URL);
+        $this->_dump('contact.form.html');
+        if (!$this->get_form('name', 'aspnetForm')) {
+            $this->log('Contact details form not found',
+                       Log_Abstract::LEVEL_ERROR);
+            return false;
+        } else {
+            $prefix = $this->_form['IDPrefix'];
+        }
+
+        $k = 'birthday';
+        if (!empty($details[$k])) {
+            list(
+                $this->_form["{$prefix}iBirthYear"],
+                $this->_form["{$prefix}iBirthMonth"],
+                $this->_form["{$prefix}iBirthDay"]
+            ) = $details[$k];
+        }
+
+        $k = 'email';
+        if (!empty($details[$k])) {
+            $this->_form["{$prefix}iPersonalEmail"] = is_array($details[$K])
+                ? $details[$k]['email']
+                : $details[$k];
+        }
+
+        $k = 'location';
+        if (!empty($details[$k])) {
+            $this->_form["{$prefix}iCountryCode"] = $details[$k]['country'];
+            $this->_form["{$prefix}iCountryName"] = 'United States';  // @todo parse out actual country
+            $this->_form["{$prefix}iRegion"] = $this->call_process_method(
+                'get_region_id',
+                $details[$k]['country'],
+                $details[$k]['region']
+            );
+            $this->_form["{$prefix}iPostalCode"] = $details[$k]['postal_code'];
+        }
+
+        $this->_form->action = $this->_connection->last_url;
+        $this->submit();
+        $this->_dump('contact.submit.html');
+        if (false !== strpos($this->_response, 'changes were saved')) {
+            return true;
+        }
+
+        $this->log('Failed updating contact details',
+                   Log_Abstract::LEVEL_ERROR);
+        return false;
+    }
+
+    public function update_account_birthday(array $birthday)
+    {
+        return $this->update_contact_details(array('birthday' => $birthday));
+    }
+
+    public function update_account_location(array $location)
+    {
+        return $this->update_contact_details(array('location' => $location));
+    }
+
+    /**
+     * Checks if a user has default userpic
+     *
+     * @return bool
+     */
+    public function is_default_userpic($src=null)
+    {
+        $this->log('Checking for default userpic');
+        return (false !== strpos(((null === $src)
+            ? $this->_response
+            : $src), ' src="http://secure.wlxrs.com/$live.controls.images/ic/bluemannxl.png"'));
+    }
+
+    public function is_privacy_mode_not_set($src=null)
+    {
+        $this->log('Checking if privacy mode is not set yet');
+        return (false !== strpos(((null === $src)
+            ? $this->_response
+            : $src), 'sn_privacyProfile_pageId'));
+    }
+
+    public function update_privacy_mode($mode=self::PRIVACY_MODE_PUBLIC)
+    {
+        $this->log('Updating privacy mode');
+
+        $profile_host = $this->_get_profile_host();
+        if ("{$profile_host}/" != $this->_connection->last_url) {
+            $this->get($profile_host);
+            $this->_dump('profile.html');
+        }
+
+        if (false !== strpos($this->_response, 'sn_privacyProfile_pageId')) {
+            $this->post(
+                $profile_host . self::PRIVACY_MIGRATE_URL,
+                http_build_query(array(
+                    'sc' => $this->_connection->get_cookie('sc'),
+                ))
+            );
+            $this->_dump('privacy.migrate.html');
+            if (false === strpos($this->_response, 'Done')) {
+                $this->log('Failed initiating privacy settings migration',
+                           Log_Abstract::LEVEL_ERROR);
+                return false;
+            }
+            $this->post(
+                $profile_host . self::PRIVACY_SAVE_URL,
+                http_build_query(array(
+                    'privacyProfilePageId' => 'ProfileCompleteness',
+                    'privacyProfileType'   => $mode,
+                    'sc'                   => $this->_connection->get_cookie('sc'),
+                ))
+            );
+            $this->_dump('privacy.migrate.final.html');
+            return (false !== strpos($this->_response, 'has been saved'));
+        } else {
+            $this->get($this->_get_profile_host() . self::PRIVACY_URL);
+            $this->_dump('privacy.form.html');
+            if (!$this->get_form('name', 'permissionsForm')) {
+                $this->log('Privacy mode form not found',
+                           Log_Abstract::LEVEL_ERROR);
+                return false;
+            }
+            $this->_form['privacyProfileType'] = $mode;
+            $this->submit();
+            $this->_dump('privacy.submit.html');
+            return (false !== strpos($this->_response, 'value="' . $mode . '  checked'));
+        }
+    }
+
+    public function __call($method, $args)
+    {
+        if ($this->_connection) {
+            if ('ajax' == $method) {
+                $args = array_pad($args, 5, null);
+                if (!$args[4]) {
+                    $args[4] = array();
+                }
+                $args[4]['X-Requested-With'] = null;
+                $args[4]['X-FPP-Command'] = 0;
+                $args[4]['sc'] = $this->_connection->get_cookie('sc');
+            }
+            if ($this->_connection->is_mobile) {
+                $this->_connection->is_mobile = false;
+            }
+        }
+
+        parent::__call($method, $args);
+        $this->_redirect();
+        if (500 <= $this->_connection->status_code) {
+            $this->_dump('svc-down.html');
+            throw new Actor_Live_Exception(
+                'Service temporarily unavailable',
+                Actor_Exception::SERVICE_ERROR
+            );
+        } else if (false !== strpos($this->_response, '--Error Info--')) {
+            $this->_dump('svc-error.html');
+            throw new Actor_Live_Exception(
+                'Service error occured',
+                Actor_Exception::SERVICE_ERROR
+            );
+        } else {
+            return $this->_response;
+        }
+    }
+}

@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/sergey_lib/!svn/ver/976/trunk/Actor/Yahoo
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/sergey_lib/!svn/ver/110/trunk/Actor/Yahoo/Exception.php
+END
+Registrator.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/953/trunk/Actor/Yahoo/Registrator.php
+END
+Messenger.php
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/sergey_lib/!svn/ver/976/trunk/Actor/Yahoo/Messenger.php
+END

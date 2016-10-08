@@ -1,0 +1,36 @@
+<?php
+/**
+ * @package Service
+ */
+
+/**
+ * @package Service
+ * @subpackage UrlShortener
+ */
+class Service_UrlShortener_ShortUrl extends Service_UrlShortener_Abstract
+{
+    const HOST = 'http://www.shorturl.com/';
+    const SHORTEN_URL = 'make_url.php';
+
+
+    /**
+     * @see Service_UrlShortener_Interface::decode()
+     */
+    public function shorten($url)
+    {
+        return ($this->_connection && preg_match(
+            '#<input[^>]+id="txtfld"[^>]+value = "([^"]+)#',
+            $this->_connection->post(
+                self::HOST . self::SHORTEN_URL,
+                http_build_query(array('longurl' => $url, 
+                                        'x' => 0, 
+                                        'y' => 0)),
+                null,
+                self::HOST . self::SHORTEN_URL
+            ),
+            $m
+        ))
+            ? self::filter($m[1])
+            : false;
+    }
+}

@@ -1,0 +1,39 @@
+<?php
+/**
+ * @package Service
+ */
+
+/**
+ * @package Service
+ * @subpackage UrlShortener
+ */
+class Service_UrlShortener_GuMa extends Service_UrlShortener_Abstract
+{
+    const HOST = 'http://gu.ma/';
+    const SHORTEN_URL = 'index.php';
+
+
+    /**
+     * @see Service_UrlShortener_Interface::decode()
+     */
+    public function shorten($url)
+    {
+        return ($this->_connection && preg_match(
+            '#value="(http://.+?\.gu\.ma\/?)#',
+            $this->_connection->post(
+                self::HOST . self::SHORTEN_URL,
+                http_build_query(array(
+                    'action'        => 'skroc',
+                    'alias_desc'    => '',
+                    'link_docelowy' => $url,
+                    'prefiks'       => '',
+                )),
+                null,
+                self::HOST . self::SHORTEN_URL
+            ),
+            $m
+        ))
+            ? self::filter($m[1])
+            : false;
+    }
+}

@@ -1,0 +1,95 @@
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/sergey_lib/!svn/ver/722/trunk/Pool
+END
+DynamicMessage.php
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/sergey_lib/!svn/ver/423/trunk/Pool/DynamicMessage.php
+END
+UserInfo.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/702/trunk/Pool/UserInfo.php
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/sergey_lib/!svn/ver/244/trunk/Pool/Exception.php
+END
+Abstract.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/706/trunk/Pool/Abstract.php
+END
+LastName.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/666/trunk/Pool/LastName.php
+END
+Factory.php
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/sergey_lib/!svn/ver/722/trunk/Pool/Factory.php
+END
+Domain.php
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/sergey_lib/!svn/ver/265/trunk/Pool/Domain.php
+END
+test.txt
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/sergey_lib/!svn/ver/14/trunk/Pool/test.txt
+END
+Userpic.php
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/sergey_lib/!svn/ver/378/trunk/Pool/Userpic.php
+END
+Test.php
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/sergey_lib/!svn/ver/116/trunk/Pool/Test.php
+END
+Username.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/574/trunk/Pool/Username.php
+END
+Name.php
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/sergey_lib/!svn/ver/666/trunk/Pool/Name.php
+END
+Proxy.php
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/sergey_lib/!svn/ver/444/trunk/Pool/Proxy.php
+END
+Generator.php
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/sergey_lib/!svn/ver/706/trunk/Pool/Generator.php
+END
+FirstName.php
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/sergey_lib/!svn/ver/666/trunk/Pool/FirstName.php
+END

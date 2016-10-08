@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/PocztaPl
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/sergey_lib/!svn/ver/244/trunk/Actor/PocztaPl/Exception.php
+END
+Registrator.php
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/PocztaPl/Registrator.php
+END
+Messenger.php
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/PocztaPl/Messenger.php
+END

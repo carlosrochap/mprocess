@@ -1,0 +1,296 @@
+<?php
+/**
+ * @package Actor
+ */
+
+/**
+ * @package Actor
+ * @subpackage Live
+ */
+class Actor_Live_Messenger
+    extends Actor_Live
+    implements Actor_Interface_Messenger
+{
+    const MAILBOX_INBOX = '00000000-0000-0000-0000-000000000001';
+    const MAILBOX_SPAM  = '00000000-0000-0000-0000-000000000005';
+
+    const MAILBOX_LANDING_URL = '/mail/InboxLight.aspx';
+    const MAILBOX_AJAX_URL    = '/mail/mail.fpp';
+
+    const INVITE_FORM_URL = '/connect/send';
+    const INVITE_SEND_URL = '/Fpp/connectionservice.fpp';
+
+
+    protected $_mail_tokens = null;
+
+
+    /**
+     * Fetches FPP tokens
+     *
+     * @return array|false
+     */
+    protected function _get_mail_tokens()
+    {
+        $this->log('Fetching mail tokens');
+
+        if (!$this->_mail_tokens) {
+            $this->get(self::MAIL_HOST);
+            $this->_dump('homepage.html');
+
+            $url = new Url($this->_connection->last_url);
+            $url->path = self::MAILBOX_LANDING_URL;
+            $url->query = array('n' => time());
+            $this->get($url);
+            $this->_dump('landing.html');
+
+            $this->_mail_tokens = array();
+            foreach (array('SessionId', 'AuthUser') as $k) {
+                if (!preg_match('#' . $k . ': "(.+?)", #', $this->_response, $m)) {
+                    throw new Actor_Live_Exception(
+                        "Mail token {$k} not found",
+                        Actor_Exception::PROXY_BANNED
+                    );
+                }
+                $this->_mail_tokens[$k] = stripcslashes($m[1]);
+            }
+
+            $cnmn = array('Microsoft.Msn.Hotmail.Ui.Fpp.MailBox', 'DemandLoad');
+            $this->ajax(self::MAILBOX_AJAX_URL, array(
+                'cn' => &$cnmn[0],
+                'd'  => '["MessageListContextMenu"]',
+                'mn' => &$cnmn[1],
+                'v'  => 1,
+            ), array(
+                'cnmn' => implode('.', $cnmn),
+                'ptid' => 0,
+                'a'    => &$this->_mail_tokens['SessionId'],
+                'au'   => &$this->_mail_tokens['AuthUser'],
+            ));
+            $this->_dump('preload.html');
+        }
+        return $this->_mail_tokens;
+    }
+
+
+    /**
+     * @ignore
+     */
+    public function init()
+    {
+        $this->_mail_tokens = null;
+        return parent::init();
+    }
+
+    /**
+     * @see Actor_Interface_Messenger::send()
+     */
+    public function send($recipient, $msg, $subj='')
+    {
+        return false;
+    }
+
+    /**
+     * Fetches unreaded messages from particular mailbox
+     *
+     * @param string $mailbox Mailbox UUID
+     * @return array|false
+     */
+    public function get_messages($mailbox=self::MAILBOX_INBOX)
+    {
+        $this->log('Fetching messages');
+
+        $tokens = $this->_get_mail_tokens();
+        if (!$tokens) {
+            return false;
+        }
+
+        $cnmn = array('Microsoft.Msn.Hotmail.Ui.Fpp.MailBox', 'GetInboxData');
+        $this->ajax(self::MAILBOX_AJAX_URL, array(
+            'cn' => &$cnmn[0],
+            'd'  => 'true,false,true,{"' . $mailbox . '",null,null,FirstPage,5,1,null,null,Date,false,false,null,null,-1,Off,-1,null,null},false,null',
+            'mn' => &$cnmn[1],
+            'v'  => 1,
+        ), array(
+            'cnmn' => implode('.', $cnmn),
+            'ptid' => 0,
+            'a'    => &$tokens['SessionId'],
+            'au'   => &$tokens['AuthUser'],
+        ));
+        $this->_dump("{$mailbox}.js");
+        $s = 'InboxUiData("';
+        if (
+            (false === ($i = strpos($this->_response, $s))) ||
+            (false === ($j = strpos($this->_response, '",""', $i)))
+        ) {
+            throw new Actor_Live_Exception(
+                "{$mailbox} data not found",
+                Actor_Exception::PROXY_BANNED
+            );
+        } else {
+            $i += strlen($s);
+            $this->_response =
+                '<html><head></head><body>' .
+                stripcslashes(substr($this->_response, $i, $j - $i)) .
+                '</body></html>';
+        }
+
+        $doc = new DOMDocument();
+        if (!@$doc->loadHTML($this->_response)) {
+            throw new Actor_Live_Exception(
+                "Failed to parse {$mailbox} data",
+                Actor_Exception::INVALID_ARGUMENT
+            );
+        }
+
+        $xpath = new DOMXPath($doc);
+        $nodes = $xpath->query('//table[@class="InboxTable"]/tbody/tr[@class="mlUnrd"]');
+        if ($nodes->length) {
+            $msgs = array();
+            foreach ($nodes as $node) {
+                $msg = array(
+                    'mailbox' => $mailbox,
+                    'uuid'    => $node->getAttribute('id'),
+                    'mad'     => $node->getAttribute('mad'),
+                );
+                foreach ($node->getElementsByTagName('td') as $elem) {
+                    switch ($elem->getAttribute('class')) {
+                    case 'Fm':
+                        $msg['from'] = $elem->getElementsByTagName('span')->item(0)->getAttribute('email');
+                        break;
+                    case 'Sb':
+                    case 'SbB':
+                        $msg['subject'] = $elem->getElementsByTagName('a')->item(0)->textContent;
+                        break;
+                    }
+                }
+                $msgs[] = $msg;
+            }
+            return $msgs;
+        }
+        $this->log('No messages found',
+                   Log_Abstract::LEVEL_ERROR);
+        return false;
+    }
+
+    /**
+     * Fetches a message content
+     *
+     * @param array $msg Message details
+     * @return string|false
+     */
+    public function get_message(array $msg)
+    {
+        $this->log("Fetching message #{$msg['uuid']}");
+
+        $tokens = $this->_get_mail_tokens();
+        if (!$tokens) {
+            return false;
+        }
+
+        $cnmn = array('Microsoft.Msn.Hotmail.Ui.Fpp.MailBox', 'GetInboxData');
+        $this->ajax(self::MAILBOX_AJAX_URL, array(
+            'cn' => &$cnmn[0],
+            'mn' => &$cnmn[1],
+            'd'  => 'false,false,false,null,true,{"' . $msg['uuid'] . '",false,-1,null,{"' . addcslashes($msg['mad'], '|') . '"},null,"' . $msg['mailbox'] . '",true,"' . addcslashes($msg['from'], '|\'"') . '"}',
+            'v'  => 1,
+        ), array(
+            'cnmn' => implode('.', $cnmn),
+            'ptid' => 0,
+            'a'    => &$tokens['SessionId'],
+            'au'   => &$tokens['AuthUser'],
+        ));
+        $this->_dump("msg.{$msg['uuid']}.js");
+        $s = 'InboxUiData("","","","';
+        if (
+            (false === ($i = strpos($this->_response, $s))) |
+            (false === ($j = strpos($this->_response, '","",', $i)))
+        ) {
+            throw new Actor_Live_Exception(
+                'Invalid response',
+                Actor_Exception::PROXY_BANNED
+            );
+        } else {
+            $i += strlen($s);
+        }
+
+        $this->_response = stripcslashes(substr($this->_response, $i, $j - $i));
+        return $this->_response;
+    }
+
+    /**
+     * Sends out an invitation
+     *
+     * @param string $recipient User Live ID
+     * @return bool
+     */
+    public function invite($recipient)
+    {
+        $this->log("Inviting {$recipient}");
+
+        $profile_host = $this->_get_profile_host();
+
+        $this->get($profile_host . self::INVITE_FORM_URL, array(
+            'cid' => &$recipient,
+        ), $this->_get_profile_host($recipient));
+        $this->_dump("{$recipient}.invite.form.html");
+        if (!$this->get_form('id', 'sncn_sfrm')) {
+            throw new Actor_Live_Exception(
+                'Invitation form not found',
+                Actor_Exception::PROXY_BANNED
+            );
+        }
+
+        $tokens = array();
+        foreach (array('E', 'SD') as $k) {
+            if (!preg_match('/\n"' . $k . '":(".+?"),\r/', $this->_response, $m)) {
+                throw new Actor_Live_Exception(
+                    "Invite request token {$k} not found",
+                    Actor_Exception::PROXY_BANNED
+                );
+            }
+            $tokens[$k] = json_decode($m[1]);
+        }
+
+        $cnmn = array(
+            'Microsoft.Spaces.Profile.Models.Connect.Send.ConnectionService',
+            'sendinvitebatch'
+        );
+        $this->ajax($profile_host . self::INVITE_SEND_URL, array(
+            'cn' => &$cnmn[0],
+            'mn' => &$cnmn[1],
+            'd'  => '[{' . implode(',', array(
+                '"0x' . $recipient. '"',
+                'null',
+                json_encode($tokens['E']),
+                '""',
+                '""',
+                '""',
+                'null',
+                'null',
+                addcslashes(json_encode($tokens['SD']), ':')
+            )) . '}],{"",false,false}',
+            'v'  => 2,
+        ), array(
+            'cnmn' => implode('.', $cnmn),
+            'ptid' => 0,
+            'a'    => '',
+            'au'   => '',
+        ));
+        $this->_dump("{$recipient}.invite.js");
+        return false;
+    }
+
+    public function __call($method, $args)
+    {
+        if ('ajax' == $method) {
+            if (5 > count($args)) {
+                $args = array_pad($args, 4, null);
+                $args[4] = array();
+            }
+            if ($s = $this->_connection->get_cookie('mt')) {
+                $args[4]['mt'] = $s;
+            }
+        }
+        return parent::__call($method, $args);
+    }
+}

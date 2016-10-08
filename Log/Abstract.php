@@ -1,0 +1,99 @@
+<?php
+/**
+ * @package Log
+ */
+
+/**
+ * Base class for loggers
+ *
+ * @method Log_Abstract error() Logs an error message
+ * @method Log_Abstract info()  Logs an info (default level) message
+ * @method Log_Abstract debug() Logs a debug message
+ *
+ * @package Log
+ */
+abstract class Log_Abstract implements Log_Interface
+{
+    /**
+     * Three log levels are supported:
+     * -- errors only;
+     * -- errors & normal messages;
+     * -- above & debug messages.
+     * Errors only level is for internal use only and can't even be set using
+     * {@link ::$is_verbose} flag.
+     */
+    const LEVEL_ERROR = -0x01;
+    const LEVEL_INFO  =  0x00;
+    const LEVEL_DEBUG =  0x01;
+
+
+    /**
+     * Verbosity level, maps directly to the levels constants above
+     * by casting to int
+     *
+     * @var bool
+     */
+    public $is_verbose = false;
+
+
+    /**
+     * Prepares non-scalar messages by converting to strings if possible
+     * or by serializing them.
+     *
+     * @param mixed $msg
+     * @return string
+     */
+    static public function prepare($msg)
+    {
+        if (is_object($msg)) {
+            if ($msg instanceof Exception) {
+                return
+                    $msg->getMessage() . ' (' . get_class($msg) . '::0x' .
+                    str_pad(dechex($msg->getCode()), 8, '0', STR_PAD_LEFT) . ')';
+            } else if ($msg instanceof Html_FOrm) {
+                $msg = $msg->to_array();
+            } else {
+                $m = '__toString';
+                if (method_exists($msg, $m)) {
+                    return $msg->$m();
+                }
+            }
+        }
+        return (is_object($msg) || is_array($msg))
+            ? serialize($msg)
+            : (string)$msg;
+    }
+
+
+    public function close()
+    {
+        return $this;
+    }
+
+    public function __destruct()
+    {
+        $this->write('Bye', self::LEVEL_INFO);
+        $this->close();
+    }
+
+    /**
+     * Allows to write log messages with predefined verbosity level with
+     * virtual methods error(), info() and debug().
+     *
+     * @param string $method
+     * @param array  $args   Arbitrary number of messages
+     */
+    public function __call($method, $args)
+    {
+        if (count($args)) {
+            $const = 'self::LEVEL_' . strtoupper($method);
+            $lvl = defined($const)
+                ? constant($const)
+                : self::LEVEL_INFO;
+            foreach ($args as $msg) {
+                $this->write($msg, $lvl);
+            }
+        }
+        return $this;
+    }
+}

@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/sergey_lib/!svn/ver/1000/trunk/vendors/decaptcher
+END
+api_consts.inc.php
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/sergey_lib/!svn/ver/1000/trunk/vendors/decaptcher/api_consts.inc.php
+END
+ccproto.inc.php
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/sergey_lib/!svn/ver/1000/trunk/vendors/decaptcher/ccproto.inc.php
+END
+ccproto_client.php
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/sergey_lib/!svn/ver/1000/trunk/vendors/decaptcher/ccproto_client.php
+END

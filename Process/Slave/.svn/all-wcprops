@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/sergey_lib/!svn/ver/702/trunk/Process/Slave
+END
+Generic.php
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/sergey_lib/!svn/ver/702/trunk/Process/Slave/Generic.php
+END
+Sesame.php
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/sergey_lib/!svn/ver/682/trunk/Process/Slave/Sesame.php
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/399/trunk/Process/Slave/Exception.php
+END
+Abstract.php
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/sergey_lib/!svn/ver/608/trunk/Process/Slave/Abstract.php
+END
+Factory.php
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/sergey_lib/!svn/ver/565/trunk/Process/Slave/Factory.php
+END

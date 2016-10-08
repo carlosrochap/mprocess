@@ -1,0 +1,220 @@
+<?php
+/**
+ * @package Pool
+ */
+
+/**
+ * Proxy dispatcher client
+ *
+ * @property string pass     Alias for {@link ::$password}
+ * @property string session  Alias for {@link ::$sid}
+ * @package Pool
+ */
+class ProxyDispatcher
+{
+    const TYPE_HTTP    = 'http';
+    const TYPE_SOCKS5  = 'socks5';
+    const DEFAULT_TYPE = 'socks5';
+
+    const DISPATCHER_HOST = '85.17.172.11';
+    const DISPATCHER_PORT = 8080;
+
+
+    static protected $_softnets = array();
+
+    protected $_co = null;
+
+    public $project = '';
+    public $password = '';
+    public $sid = '';
+    public $is_verbose = false;
+
+
+    protected function _call($cmd='', $payload=null)
+    {
+        if (!$this->project || !$this->password) {
+            throw new InvalidArgumentException('Project name or password is missing');
+        }
+        if (!$this->sid) {
+            $cmd = '';
+        }
+        if (!$this->_co) {
+            $this->_co = curl_init();
+            curl_setopt_array($this->_co, array(
+                CURLOPT_TIMEOUT        => 60,
+                CURLOPT_CONNECTTIMEOUT => 20,
+                CURLOPT_HEADER         => false,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_RETURNTRANSFER => true,
+            ));
+        }
+
+        $opts = array(
+            CURLOPT_VERBOSE => (bool)$this->is_verbose,
+            CURLOPT_URL     =>
+                'http://' . self::DISPATCHER_HOST . ':' . self::DISPATCHER_PORT . '/' .
+                ($this->sid ? "{$this->sid}/" : '') . $cmd,
+            CURLOPT_USERPWD => "{$this->project}:{$this->password}",
+        );
+        if (null !== $payload) {
+            if ($this->is_verbose) {
+                echo 'SEND(): ' . serialize($payload) . "\n";
+            }
+            $opts[CURLOPT_POST] = true;
+            $opts[CURLOPT_POSTFIELDS] = is_array($payload)
+                ? http_build_query($payload)
+                : (string)$payload;
+        } else {
+            $opts[CURLOPT_HTTPGET] = true;
+        }
+        curl_setopt_array($this->_co, $opts);
+
+        $r = curl_exec($this->_co);
+        $errno = curl_errno($this->_co);
+        if ($errno) {
+            throw new RuntimeException("cURL error #{$errno} " . curl_error($this->_co) . ' occured');
+        } else {
+            $status_code = curl_getinfo($this->_co, CURLINFO_HTTP_CODE);
+            if (200 != $status_code) {
+                throw new RuntimeException("Service error {$status_code} {$r} occured");
+            } else {
+                $r = json_decode($r, true);
+                if ($r) {
+                    if ($this->is_verbose) {
+                        echo 'RECV(): ' . serialize($r) . "\n";
+                    }
+                    $this->sid = (string)@$r['sid'];
+                    return $r;
+                }
+            }
+        }
+        return null;
+    }
+
+
+    public function close()
+    {
+        $this->project = $this->password = $this->sid = '';
+        if (is_resource($this->_co)) {
+            curl_close($this->_co);
+            $this->_co = null;
+        }
+    }
+
+    /**
+     * Initializes a new project session
+     *
+     * @param string $project  Project name
+     * @param string $password Project password
+     * @return string Session ID on success
+     */
+    public function init($project, $password, $sid=null)
+    {
+        $this->close();
+        $this->project = $project;
+        $this->password = $password;
+        if ($sid) {
+            $this->sid = $sid;
+        } else {
+            $this->_call();
+        }
+        return $this;
+    }
+
+    /**
+     * Fetches or sets current session (proxies selection) options
+     *
+     * @return array|false|ProxyDispatcher
+     */
+    public function options($key=null, $value=null)
+    {
+        if (null === $key) {
+            // Getter
+            return is_array($r = $this->_call())
+                ? $r['options']
+                : false;
+        } else if ('' == $key) {
+            // Resetter
+            $this->_call('options/reset');
+            return $this;
+        } else {
+            // Setter
+            if (!is_array($key)) {
+                $key = array($key => &$value);
+            }
+            foreach (array_filter($key, 'is_array') as $k => $v) {
+                $key[$k] = implode(',', $v);
+            }
+            $this->_call('options', $key);
+            return $this;
+        }
+    }
+
+    /**
+     * Returns random proxy tunnel as fully qualified URL
+     *
+     * @return string
+     */
+    public function proxy($type=self::DEFAULT_TYPE)
+    {
+        if (!$type) {
+            // Resetter
+            $this->_call('proxy');
+            return $this;
+        } else {
+            // Getter
+            $r = $this->_call('proxy');
+            return !empty($r['softnet'])
+                ? "{$type}://{$this->project}:{$this->sid}@{$r['softnet'][0]}:{$r['softnet'][1]}"
+                : null;
+        }
+    }
+
+    /**
+     * Reports current proxy as failed
+     *
+     * @return bool
+     */
+    public function failed()
+    {
+        $this->_call('proxy/failed');
+        return $this;
+    }
+
+    /**
+     * @ignore
+     */
+    public function __destruct()
+    {
+        $this->close();
+    }
+
+    /**
+     * @ignore
+     */
+    public function __set($key, $value)
+    {
+        switch ($key) {
+        case 'pass':
+            $this->password = $value;
+            break;
+        case 'session':
+            $this->sid = $value;
+            break;
+        }
+    }
+
+    /**
+     * @ignore
+     */
+    public function __get($key)
+    {
+        switch ($key) {
+        case 'pass':
+            return $this->password;
+        case 'session':
+            return $this->sid;
+        }
+        return null;
+    }
+}

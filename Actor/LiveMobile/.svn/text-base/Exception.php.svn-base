@@ -1,0 +1,11 @@
+<?php
+/**
+ * @package Actor
+ */
+
+/**
+ * @package Actor
+ * @subpackage LiveMobile
+ */
+class Actor_LiveMobile_Exception extends Actor_Exception
+{}

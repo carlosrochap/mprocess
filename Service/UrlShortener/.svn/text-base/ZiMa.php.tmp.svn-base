@@ -1,0 +1,45 @@
+<?php
+/**
+ * @package Service
+ */
+
+/**
+ * @package Service
+ * @subpackage UrlShortener
+ */
+class Service_UrlShortener_ZiMa extends Service_UrlShortener_Abstract
+{
+    const HOST = 'http://zi.ma';
+
+
+    /**
+     * @see Service_UrlShortener_Interface::decode()
+     */
+    public function shorten($url)
+    {
+        return ($this->_connection && preg_match(
+            '#value="([^"]+)#',
+            $this->_connection->post(
+                self::HOST . '/',
+                array(
+                    'url'         => $url,
+                    'title'       => '',
+                    'description' => '',
+                    'tag'         => '',
+                    'validTill'   => '',
+                    'urlpass'     => '',
+                    'bulk'        => ''
+                ),
+                array(
+                    'module' => 'ShortURL',
+                    'file'   => 'Add',
+                    'mode'   => 'short'
+                ),
+                self::HOST . '/'
+            ),
+            $m
+        ))
+            ? self::filter($m[1])
+            : false;
+    }
+}

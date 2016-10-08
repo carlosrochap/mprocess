@@ -1,0 +1,83 @@
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/sergey_lib/!svn/ver/732/trunk/Actor
+END
+Hotmail.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/511/trunk/Actor/Hotmail.php
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/sergey_lib/!svn/ver/825/trunk/Actor/Exception.php
+END
+Live.php
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/sergey_lib/!svn/ver/980/trunk/Actor/Live.php
+END
+Interface.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/1/trunk/Actor/Interface.php
+END
+Twitter.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/792/trunk/Actor/Twitter.php
+END
+Abstract.php
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/sergey_lib/!svn/ver/949/trunk/Actor/Abstract.php
+END
+Factory.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/798/trunk/Actor/Factory.php
+END
+Live.encryptor.js
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/sergey_lib/!svn/ver/699/trunk/Actor/Live.encryptor.js
+END
+Google.php
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/Google.php
+END
+Ask.php
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/sergey_lib/!svn/ver/534/trunk/Actor/Ask.php
+END
+Yahoo.php
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/sergey_lib/!svn/ver/693/trunk/Actor/Yahoo.php
+END
+Bing.php
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/sergey_lib/!svn/ver/534/trunk/Actor/Bing.php
+END
+LiveMobile.php
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/sergey_lib/!svn/ver/730/trunk/Actor/LiveMobile.php
+END

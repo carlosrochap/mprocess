@@ -1,0 +1,329 @@
+<?php
+/**
+ * @package Actor
+ */
+
+/**
+ * @package Actor
+ * @subpackage Yahoo
+ */
+class Actor_Yahoo_Registrator
+    extends Actor_Yahoo
+    implements Actor_Interface_Registrator
+{
+    const REGISTER_AJAX_URL = '/reg_json';
+    const REGISTER_CAPTCHA_PROXY_URL = '/captcha/CaptchaWSProxyService.php';
+
+    const DEFAULT_DOMAIN = 'yahoo.com';
+
+
+    static protected $_countries_wo_postal_code = array();
+
+
+    /**
+     * @ignore
+     */
+    protected function _register($email, $pass, array $details)
+    {
+        $this->get(self::HOST . '/', null, self::HOST . '/');
+        $this->_dump('landing.html');
+        if (!$signup_url = Html_Document::find_first(
+            $this->_response,
+            'a[@id = "signUpBtn"]'
+        )) {
+            throw new Actor_Yahoo_Exception(
+                'Sign up form URL not found',
+                Actor_Exception::PROXY_BANNED
+            );
+        } else {
+            $signup_url = $signup_url->getAttribute('href');
+        }
+
+        $this->get($signup_url);
+        $this->_dump('form.html');
+        if (empty(self::$_countries_wo_postal_code)) {
+            if (preg_match('/noZipCountryList\s?:\s?"([^"]+)/', $this->_response, $m)) {
+                self::$_countries_wo_postal_code =
+                    explode(',', strtoupper($m[1]));
+            }
+        }
+
+        $doc = Html_Document::get($this->_response);
+        $domains = Html_Document::find($doc, 'select[@id = "domain"]/option');
+        $details['domain'] = $domains
+            ? $domains[array_rand($domains)]->getAttribute('value')
+            : self::DEFAULT_DOMAIN;
+
+        for ($i = self::RETRY_COUNT; $i; $i--) {
+            if (!$this->get_form('id', 'regFormBody')) {
+                throw new Actor_Yahoo_Exception(
+                    'Sign up form not found',
+                    Actor_Exception::PROXY_BANNED
+                );
+            }
+
+            $referer = $this->_connection->last_url;
+
+            $this->_form['firstname'] = $details['first_name'];
+            $this->_form['secondname'] = $details['last_name'];
+            $this->_form['gender'] = strtolower($details['gender']);
+            list(
+                $this->_form['yyyy'],
+                $this->_form['mm'],
+                $this->_form['dd']
+            ) = $details['birthday'];
+
+            $k = 'user_id';
+            $$k = $details['username'];
+            for ($j = self::RETRY_COUNT; $j && !$details[$k]; $j--) {
+                if ($this->is_valid_email($$k . '@' . $details['domain'])) {
+                    $details[$k] = $$k;
+                } else {
+                    $$k = Pool_Generator::generate_username($$k, true, 32);
+                }
+            }
+            if (!$details[$k]) {
+                throw new Actor_Yahoo_Exception(
+                    'No valid e-mails found',
+                    Actor_Exception::INVALID_ARGUMENT
+                );
+            }
+
+            $captcha_version = "V{$this->_form['captchaVersion']}";
+            $captcha_doc = $this->_connection->ajax(
+                self::EDIT_HOST . self::REGISTER_CAPTCHA_PROXY_URL,
+                null,
+                array(
+                    'cid'          => &$captcha_version,
+                    'intl'         => 'us',
+                    'action'       => 'createlazy',
+                    'initial_view' => 'visual',
+                    'u'            => $this->_form['u'],
+                    't'            => $this->_form['t'],
+                )
+            );
+            $this->_dump("captcha.{$i}.xml", $captcha_doc);
+            if (!preg_match('#<Turnkey>([\s\S]+?)</Turnkey>#', $captcha_doc, $m)) {
+                throw new Actor_Yahoo_Exception(
+                    'Invalid CAPTCHA details',
+                    Actor_Exception::PROXY_BANNED
+                );
+            } else {
+                $captcha_doc = Html_Document::get(
+                    '<html><body>' . html_entity_decode($m[1]. ENT_QUOTES) . '</body></html>'
+                );
+            }
+            if (!$captcha_url = Html_Document::find_first(
+                $captcha_doc,
+                'img[@id = "captcha' . $captcha_version . 'ClassicCaptchaImg"]'
+            )) {
+                throw new Actor_Yahoo_Exception(
+                    'CAPTCHA URL not found',
+                    Actor_Exception::PROXY_BANNED
+                );
+            } else {
+                $captcha_url = $captcha_url->getAttribute('src');
+            }
+            for ($captcha = false, $j = self::RETRY_COUNT; $j && !$captcha; $j) {
+                $captcha = $this->_decode_captcha($captcha_url, 'jpg', $referer);
+            }
+            if (!$captcha) {
+                break;
+            } else {
+                foreach (array(
+                    'Cdata',
+                    'ClassInfo',
+                    'ClassicCaptchaId',
+                    'AudioCaptchaId',
+                    'View',
+                ) as $s) {
+                    if ($e = Html_Document::find_first(
+                        $captcha_doc,
+                        'input[@id = "captcha' . $captcha_version . $s . '"]'
+                    )) {
+                        $this->_form['captcha' . $s] = $e->getAttribute('value');
+                    }
+                }
+                $this->_form['captchaAnswer'] = $captcha[1];
+            }
+
+            if (empty($details['country'])) {
+                $details['country'] =
+                    self::$_countries_wo_postal_code[array_rand(self::$_countries_wo_postal_code)];
+            }
+            if (in_array($details['country'], self::$_countries_wo_postal_code)) {
+                $details['postal_code'] = '';
+            }
+
+            $this->_form['country'] = strtolower($details['country']);
+
+            $this->_form['yahooid'] = $details['user_id'];
+            $this->_form['domain'] = $details['domain'];
+            $this->_form['password'] = $this->_form['passwordconfirm'] = $pass;
+            $details['security_questions'] = array();
+            foreach (array($details['first_name'], $details['last_name']) as $k => $v) {
+                $qid = 'secquestion' . ($k ? ($k + 1) : '');
+                $aid = 'secquestionanswer' . ($k ? ($k + 1) : '');
+                $qs = Html_Document::find($doc, 'select[@id = "' . $qid . '"]/option[@value != ""]');
+                if ($qs) {
+                    $q = $qs[array_rand($qs)]->getAttribute('value');
+                    $this->_form[$qid] = $q;
+                    $this->_form[$aid] = (4 <= mb_strlen($v))
+                        ? $v
+                        : "{$v} {$v}";
+                    $details['security_questions'][$k] = array(
+                        $this->_form[$qid],
+                        $this->_form[$aid]
+                    );
+                }
+            }
+
+            $this->_form['rf'] = preg_match("#var fid = '([^']+)#", $this->_response, $m)
+                ? md5($details['user_id'] . $m[1])
+                : '';
+            $this->_form['jsenabled'] = 1;
+            $this->_form['binMapFld'] = $details['postal_code']
+                ? 1802238
+                : 1801982;
+            $this->_form['tmps'] = 'false';
+            $this->_form['audioCaptchaClicked'] = $this->_form['audioCaptchaReplayClicked'] = 0;
+            $this->_form['d_i'] = '0.0.0;24;768;1024;768;1024;24;true;' . strftime('%a %e %b %Y %r %Z') . ';true;' . $this->_connection->user_agent . ';1;';
+            $this->_form['d_i_h'] = md5($this->_form['d_i']);
+            $total_time = 0;
+            $a = array();
+            for ($j = self::RETRY_COUNT; $j; $j--) {
+                foreach (array('firstname', 'secondname', 'gender', 'domain', 'yahooid', 'mm', 'dd', 'yyyy', 'country', 'postalcode', 'password', 'passwordconfirm', 'altemail', 'secquestion', 'secquestionanswer', 'secquestion2', 'secquestionanswer2') as $k) {
+                    $v = rand(100, 4000);
+                    $total_time += $v;
+                    $a[] = "{$k}#{$v}";
+                }
+            }
+            shuffle($a);
+            $a[] = "total_time#{$total_time}";
+            $this->_form['timeSpent'] = implode(';', $a);
+            unset($this->_form['regType']);
+            $this->submit();
+            $this->_dump("submit.{$i}.html");
+            if (false !== strpos($this->_response, 'regConfirmBodyFrm')) {
+                $this->user_id = $details['user_id'] = "{$this->_form['yahooid']}@{$this->_form['domain']}";
+                return $details;
+            }
+            if (false !== strpos($this->_response, 'yflderr" id="captchaFld"')) {
+                $this->log('Invalid CAPTCHA',
+                           Log_Abstract::LEVEL_ERROR);
+                if ($captcha && (self::RETRY_COUNT != $i)) {
+                    // Yahoo! sometime rejects first CAPTCHA
+                    $this->_get_captcha_decoder()->report($captcha[0]);
+                }
+            }
+            if (false !== strpos($this->_response, 'yflderr" id="countryFld"')) {
+                $this->log("Invalid country {$details['country']}",
+                           Log_Abstract::LEVEL_ERROR);
+                $details['country'] = '';
+            }
+            if (false !== strpos($this->_response, 'yflderr" id="zipcodeFld"')) {
+                $this->log("Invalid {$details['country']} postal code {$details['postal_code']}",
+                           Log_Abstract::LEVEL_ERROR);
+                $details['postal_code'] = '';
+            }
+            if (false !== strpos($this->_response, 'yflderr" id="yahooIdFld"')) {
+                $this->log("Invalid Yahoo ID {$details['user_id']}@{$details['domain']}",
+                           Log_Abstract::LEVEL_ERROR);
+                unset($details['user_id']);
+            }
+        }
+
+        return false;
+    }
+
+
+    public function is_valid_email($email, Html_Form $form=null)
+    {
+        $this->log("Checking if {$email} is available");
+
+        if (null === $form) {
+            $form = $this->_form;
+        }
+
+        $response = json_decode($this->_connection->get(
+            self::EDIT_HOST . self::REGISTER_AJAX_URL,
+            http_build_query(array(
+                'PartnerName'    => 'yahoo_default',
+                'RequestVersion' => 1,
+                'AccountID'      => $email,
+                'GivenName'      => $form['firstname'],
+                'FamilyName'     => $form['secondname'],
+                'ApiName'        => 'ValidateFields',
+                'intl'           => 'us',
+            )) . '&' . substr((string)time(), 3) . http_build_query(array(
+                'u' => $form['u'],
+                't' => $form['t'],
+            ))
+        ), true);
+        $this->_dump('email-check.js', $response);
+        return $response && 'SUCCESS' == $response['ResultCode'];
+    }
+
+    public function is_valid_postal_code($country, $postal_code, Html_Form $form=null)
+    {
+        if (!$postal_code) {
+            return false;
+        }
+
+        $this->log("Checking {$country} postal code {$postal_code}");
+        if (null === $form) {
+            $form = $this->_form;
+        }
+        $response = json_decode($this->_connection->get(
+            self::EDIT_HOST . self::REGISTER_AJAX_URL,
+            array(
+                substr((string)time(), 3) => '',
+                'PartnerName'    => 'yahoo_default',
+                'RequestVersion' => 1,
+                'PostalCode'     => &$postal_code,
+                'Country'        => strtolower($country),
+                'ApiName'        => 'ValidateFields',
+                'intl'           => 'us',
+                't'              => $form['t'],
+                'u'              => $form['u'],
+            )
+        ), true);
+        $this->_dump("validate.{$country}.{$postal_code}.js", $response);
+        return 'SUCCESS' == $response['ResultCode'];
+    }
+
+    /**
+     * @see Actor_Interface_Registrator::register()
+     */
+    public function register($email, $pass)
+    {
+        $this->log("Registering {$email}:{$pass}");
+
+        if (!$details = $this->call_process_method('get_profile_details', $email)) {
+            $this->log('Profile details not found',
+                       Log_Abstract::LEVEL_ERROR);
+            return false;
+        } else {
+            $details['user_id'] = '';
+            $details['country'] = '';
+        }
+
+        $old_follow_refresh = $this->_connection->follow_refresh;
+        $this->_connection->follow_refresh = false;
+        try {
+            $result = $this->_register($email, $pass, $details);
+        } catch (Exception $e) {
+            $result = $e;
+        }
+        $this->_connection->follow_refresh = $old_follow_refresh;
+        if ($result instanceof Exception) {
+            throw $result;
+        } else {
+            if (!$result) {
+                $this->log('Registration failed',
+                           Log_Abstract::LEVEL_ERROR);
+            }
+            return $result;
+        }
+    }
+}

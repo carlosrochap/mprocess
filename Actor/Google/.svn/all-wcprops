@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/Google
+END
+NewsSearcher.php
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/Google/NewsSearcher.php
+END
+Searcher.php
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/Google/Searcher.php
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/sergey_lib/!svn/ver/244/trunk/Actor/Google/Exception.php
+END
+Confirmer.php
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/Google/Confirmer.php
+END
+Registrator.php
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/Google/Registrator.php
+END

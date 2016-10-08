@@ -1,0 +1,31 @@
+<?php
+/**
+ * @package Captcha
+ */
+
+/**
+ * Manual CAPTCHA decoder
+ *
+ * @package Captcha
+ * @subpackage Decoder
+ */
+class Captcha_Decoder_Manual extends Captcha_Decoder_Abstract
+{
+    /**
+     * @see Captcha_Decoder_Interface::decode()
+     */
+    public function decode($fn, $timeout=0)
+    {
+        parent::decode($fn, $timeout);
+        echo "Decode CAPTCHA {$fn}, please: ";
+        return ($text = trim(fgets(STDIN))) ? array(time(), $text) : null;
+    }
+
+    /**
+     * @see Captcha_Decoder_Interface::report()
+     */
+    public function report($id, $is_correct=false)
+    {
+        return true;
+    }
+}

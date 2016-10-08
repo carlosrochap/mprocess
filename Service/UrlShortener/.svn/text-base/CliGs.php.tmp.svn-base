@@ -1,0 +1,34 @@
+<?php
+/**
+ * @package Service
+ */
+
+/**
+ * @package Service
+ * @subpackage UrlShortener
+ */
+class Service_UrlShortener_CliGs extends Service_UrlShortener_Abstract
+{
+    const HOST = 'http://cli.gs';
+    const SHORTEN_URL = '/cligs/new';
+
+
+    /**
+     * @see Service_UrlShortener_Interface::decode()
+     */
+    public function shorten($url)
+    {
+        return ($this->_connection && preg_match(
+            '#id="justclig" value="([^"]+)#',
+            $this->_connection->post(
+                self::HOST . self::SHORTEN_URL,
+                http_build_query(array('URL' => $url)),
+                null,
+                self::HOST . self::SHORTEN_URL
+            ),
+            $m
+        ))
+            ? self::filter($m[1])
+            : false;
+    }
+}

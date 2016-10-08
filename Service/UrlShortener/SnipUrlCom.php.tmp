@@ -1,0 +1,13 @@
+<?php
+/**
+ * @package Service
+ */
+
+/**
+ * @package Service
+ * @subpackage UrlShortener
+ */
+class Service_UrlShortener_SnipUrlCom extends Service_UrlShortener_SnIm
+{
+    const HOST = 'http://snipurl.com';
+}

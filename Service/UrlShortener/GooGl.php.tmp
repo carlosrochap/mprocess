@@ -1,0 +1,31 @@
+<?php
+/**
+ * @package Service
+ */
+
+/**
+ * @package Service
+ * @subpackage UrlShortener
+ */
+class Service_UrlShortener_GooGl extends Service_UrlShortener_Abstract
+{
+    const HOST = 'http://goo.gl';
+    const SHORTEN_URL = '/api/shorten';
+
+
+    /**
+     * @see Service_UrlShortener_Interface::decode()
+     */
+    public function shorten($url)
+    {
+        return ($this->_connection && ($a = json_decode(
+            $this->_connection->ajax(self::HOST . self::SHORTEN_URL, array(
+                'security_token' => '',
+                'url'            => &$url
+            ), null, self::HOST . '/'),
+            true
+        )))
+            ? $a['short_url']
+            : false;
+    }
+}

@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/sergey_lib/!svn/ver/1000/trunk/Captcha/Decoder
+END
+Manual.php
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/sergey_lib/!svn/ver/972/trunk/Captcha/Decoder/Manual.php
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/1/trunk/Captcha/Decoder/Exception.php
+END
+Interface.php
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/sergey_lib/!svn/ver/972/trunk/Captcha/Decoder/Interface.php
+END
+Decaptcher.php
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/sergey_lib/!svn/ver/1000/trunk/Captcha/Decoder/Decaptcher.php
+END
+Abstract.php
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/sergey_lib/!svn/ver/972/trunk/Captcha/Decoder/Abstract.php
+END
+DeathByCaptcha.php
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/sergey_lib/!svn/ver/991/trunk/Captcha/Decoder/DeathByCaptcha.php
+END
+Factory.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/972/trunk/Captcha/Decoder/Factory.php
+END

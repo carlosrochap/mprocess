@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/sergey_lib/!svn/ver/714/trunk/Actor/Live
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/sergey_lib/!svn/ver/28/trunk/Actor/Live/Exception.php
+END
+Registrator.php
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/sergey_lib/!svn/ver/982/trunk/Actor/Live/Registrator.php
+END
+Messenger.php
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/sergey_lib/!svn/ver/790/trunk/Actor/Live/Messenger.php
+END

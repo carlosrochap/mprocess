@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/sergey_lib/!svn/ver/723/trunk/Process/Master
+END
+Generic.php
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/sergey_lib/!svn/ver/723/trunk/Process/Master/Generic.php
+END
+Sesame.php
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/sergey_lib/!svn/ver/682/trunk/Process/Master/Sesame.php
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/sergey_lib/!svn/ver/399/trunk/Process/Master/Exception.php
+END
+Abstract.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/720/trunk/Process/Master/Abstract.php
+END
+Factory.php
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/sergey_lib/!svn/ver/565/trunk/Process/Master/Factory.php
+END

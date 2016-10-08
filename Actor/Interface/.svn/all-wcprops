@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/sergey_lib/!svn/ver/534/trunk/Actor/Interface
+END
+Searcher.php
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/sergey_lib/!svn/ver/534/trunk/Actor/Interface/Searcher.php
+END
+Confirmer.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/1/trunk/Actor/Interface/Confirmer.php
+END
+Grabber.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/413/trunk/Actor/Interface/Grabber.php
+END
+Registrator.php
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/sergey_lib/!svn/ver/1/trunk/Actor/Interface/Registrator.php
+END
+Messenger.php
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/sergey_lib/!svn/ver/174/trunk/Actor/Interface/Messenger.php
+END

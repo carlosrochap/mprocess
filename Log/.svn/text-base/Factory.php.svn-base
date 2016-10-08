@@ -1,0 +1,31 @@
+<?php
+/**
+ * @package Log
+ */
+
+/**
+ * Loggers' factory
+ *
+ * @package Log
+ */
+abstract class Log_Factory
+{
+    /**
+     * Default logger to use
+     */
+    const DEFAULT_LOGGER = 'Console';
+
+
+    /**
+     * Returns a logger instance
+     *
+     * @param string $name
+     * @return Log_Abstract subclass instance
+     */
+    static public function factory($name=null)
+    {
+        $name = ucfirst((null !== $name) ? $name : self::DEFAULT_LOGGER);
+        $class = str_replace('_Factory', "_{$name}", __CLASS__);
+        return new $class();
+    }
+}

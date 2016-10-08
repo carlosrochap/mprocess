@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/Drogi
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/sergey_lib/!svn/ver/334/trunk/Actor/Drogi/Exception.php
+END
+Registrator.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/Drogi/Registrator.php
+END
+Messenger.php
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/sergey_lib/!svn/ver/669/trunk/Actor/Drogi/Messenger.php
+END

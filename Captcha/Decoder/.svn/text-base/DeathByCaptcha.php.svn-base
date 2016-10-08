@@ -1,0 +1,67 @@
+<?php
+/**
+ * @package Captcha
+ */
+
+/**
+ * Death by Captcha API client
+ */
+require_once 'deathbycaptcha.php';
+
+
+/**
+ * Death by Captcha decoder
+ *
+ * @package Captcha
+ * @subpackage Decoder
+ */
+class Captcha_Decoder_DeathByCaptcha extends Captcha_Decoder_Abstract
+{
+    /**
+     * Returns cached DBC client instance, initializes a new one if none found.
+     *
+     * @return DeathByCaptcha_Client
+     */
+    public function get_client()
+    {
+        if (!$this->_client) {
+            $this->_client =
+                new DeathByCaptcha_SocketClient($this->user, $this->pass);
+            $this->_client->is_verbose = $this->is_verbose;
+        }
+        return parent::get_client();
+    }
+
+    /**
+     * @see Captcha_Decoder_Interface::decode()
+     */
+    public function decode($fn, $timeout=0)
+    {
+        parent::decode($fn, $timeout);
+        if (1 > $timeout) {
+            $timeout = self::DEFAULT_TIMEOUT;
+        }
+        try {
+            $captcha = $this->client->decode($fn, $timeout);
+        } catch (Exception $e) {
+            $this->log($e);
+            $captcha = null;
+        }
+        return $captcha
+            ? array($captcha['captcha'], $captcha['text'])
+            : null;
+    }
+
+    /**
+     * @see Captcha_Decoder_Interface::report()
+     */
+    public function report($id, $is_correct=false)
+    {
+        try {
+            return $is_correct || $this->client->report($id);
+        } catch (Exception $e) {
+            $this->log($e);
+            return false;
+        }
+    }
+}

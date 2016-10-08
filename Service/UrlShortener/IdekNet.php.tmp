@@ -1,0 +1,38 @@
+<?php
+/**
+ * @package Service
+ */
+
+/**
+ * @package Service
+ * @subpackage UrlShortener
+ */
+class Service_UrlShortener_IdekNet extends Service_UrlShortener_Abstract
+{
+    const HOST = 'http://idek.net';
+    const SHORTEN_URL = '/shorten/';
+
+
+    /**
+     * @see Service_UrlShortener_Interface::decode()
+     */
+    public function shorten($url)
+    {
+        return ($this->_connection && preg_match(
+            '#<div class="new_url">\s+([^<\s]+)#',
+            $this->_connection->get(
+                self::HOST . self::SHORTEN_URL,
+                array(
+                    'idek-url'    => &$url,
+                    'idek-anchor' => '',
+                    'idek-ref'    => str_replace('http://', '', self::HOST),
+                ),
+                null,
+                self::HOST . '/'
+            ),
+            $m
+        ))
+            ? self::filter($m[1])
+            : false;
+    }
+}

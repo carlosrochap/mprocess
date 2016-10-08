@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/sergey_lib/!svn/ver/994/trunk/Connection
+END
+Dummy.php
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/sergey_lib/!svn/ver/1/trunk/Connection/Dummy.php
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/sergey_lib/!svn/ver/243/trunk/Connection/Exception.php
+END
+Interface.php
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/sergey_lib/!svn/ver/1/trunk/Connection/Interface.php
+END
+Proxy.php
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/sergey_lib/!svn/ver/773/trunk/Connection/Proxy.php
+END
+Abstract.php
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/sergey_lib/!svn/ver/602/trunk/Connection/Abstract.php
+END
+Curl.php
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/sergey_lib/!svn/ver/994/trunk/Connection/Curl.php
+END

@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/sergey_lib/!svn/ver/986/trunk/Email
+END
+Rocketmail.php
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/sergey_lib/!svn/ver/334/trunk/Email/Rocketmail.php
+END
+Ymail.php
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/sergey_lib/!svn/ver/334/trunk/Email/Ymail.php
+END
+Hotmail.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/968/trunk/Email/Hotmail.php
+END
+Exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/sergey_lib/!svn/ver/334/trunk/Email/Exception.php
+END
+Live.php
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/sergey_lib/!svn/ver/334/trunk/Email/Live.php
+END
+Yahoo.php
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/sergey_lib/!svn/ver/968/trunk/Email/Yahoo.php
+END
+Interface.php
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/sergey_lib/!svn/ver/232/trunk/Email/Interface.php
+END
+Abstract.php
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/sergey_lib/!svn/ver/786/trunk/Email/Abstract.php
+END
+Factory.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/sergey_lib/!svn/ver/968/trunk/Email/Factory.php
+END
